@@ -1,0 +1,30 @@
+[Unit]
+Description=PIcket Virtual Radar
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+NotifyAccess=main
+User=rpi
+Group=rpi
+SupplementaryGroups=video input gpio
+RuntimeDirectory=picket-virtual-radar
+RuntimeDirectoryMode=0750
+WorkingDirectory=/run/picket-virtual-radar
+Environment=PVR_CONFIG=/etc/picket-virtual-radar/config.json
+ExecStartPre=/opt/picket-virtual-radar/.venv/bin/python -m picket_virtual_radar.config_recovery prepare
+ExecStart=/opt/picket-virtual-radar/.venv/bin/picket-virtual-radar
+# Web settings intentionally request a clean process exit after saving.
+# Restart even after exit status 0 so the new configuration is loaded.
+Restart=always
+RestartSec=3
+WatchdogSec=30
+TimeoutStartSec=45
+TimeoutStopSec=70
+KillSignal=SIGTERM
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

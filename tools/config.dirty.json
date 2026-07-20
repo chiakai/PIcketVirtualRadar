@@ -1,0 +1,13 @@
+{
+  "display": {
+    "device": "/dev/fb0",
+    "width": 320,
+    "height": 240,
+    "fps": 30,
+    "update_mode": "dirty"
+  },
+  "runtime": {
+    "logic_hz": 10,
+    "log_level": "INFO"
+  }
+}

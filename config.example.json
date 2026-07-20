@@ -1,0 +1,71 @@
+{
+  "display": {
+    "device": "/dev/fb0",
+    "width": 320,
+    "height": 240,
+    "fps": 30,
+    "update_mode": "full",
+    "brightness_percent": 80
+  },
+  "runtime": {
+    "logic_hz": 10,
+    "log_level": "INFO"
+  },
+  "radar": {
+    "latitude": 25.080278,
+    "longitude": 121.232222,
+    "radius_km": 50.0
+  },
+  "opensky": {
+    "client_id": "",
+    "client_secret": "",
+    "poll_interval_seconds": 15,
+    "timeout_seconds": 8
+  },
+  "tracking": {
+    "interpolation_seconds": 2.0,
+    "prediction_seconds": 20.0,
+    "stale_after_seconds": 90.0,
+    "show_on_ground": false
+  },
+  "touch": {
+    "device_name": "EP0110M09",
+    "rotation": 90,
+    "tap_max_seconds": 0.35,
+    "long_press_seconds": 0.7,
+    "move_tolerance_px": 12,
+    "swipe_min_px": 40
+  },
+  "ui": {
+    "info_mode": "callsign",
+    "show_scanline": true,
+    "show_aircraft_heading": true,
+    "show_data_age": true,
+    "show_altitude": true,
+    "show_speed": true,
+    "highlight_callsigns": []
+  },
+  "localization": {
+    "distance_unit": "km",
+    "altitude_unit": "m",
+    "speed_unit": "kt",
+    "timezone": "Asia/Taipei"
+  },
+  "web": {
+    "enabled": true,
+    "port": 8080,
+    "access_token": ""
+  },
+  "wifi": {
+    "fallback_enabled": true,
+    "interface": "wlan0",
+    "hotspot_ssid": "PIcketRadar-Setup",
+    "hotspot_password": "picket-radar",
+    "gateway": "192.168.4.1",
+    "fallback_after_seconds": 45,
+    "connection_timeout_seconds": 45,
+    "hotspot_timeout_seconds": 900,
+    "reset_button_gpio": 17,
+    "reset_hold_seconds": 8
+  }
+}

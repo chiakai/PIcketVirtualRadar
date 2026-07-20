@@ -1,0 +1,20 @@
+polkit.addRule(function(action, subject) {
+    if (subject.user !== "rpi") {
+        return polkit.Result.NOT_HANDLED;
+    }
+    if (action.id === "org.freedesktop.NetworkManager.enable-disable-wifi" ||
+        action.id === "org.freedesktop.NetworkManager.wifi.share.open" ||
+        action.id === "org.freedesktop.NetworkManager.wifi.share.protected" ||
+        action.id === "org.freedesktop.login1.power-off" ||
+        action.id === "org.freedesktop.login1.power-off-multiple-sessions" ||
+        action.id === "org.freedesktop.login1.reboot" ||
+        action.id === "org.freedesktop.login1.reboot-multiple-sessions") {
+        return polkit.Result.YES;
+    }
+    if (action.id === "org.freedesktop.systemd1.manage-units" &&
+        action.lookup("verb") === "start" &&
+        /^picket-display-rotate@(90|270)\.service$/.test(action.lookup("unit"))) {
+        return polkit.Result.YES;
+    }
+    return polkit.Result.NOT_HANDLED;
+});
