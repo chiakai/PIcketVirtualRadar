@@ -40,6 +40,8 @@ HELP_LINES = (
     "A: live age  P: predicted age",
     "STATUS: network state",
     "API: OpenSky state",
+    "CENTER GPS: USB GPS fix",
+    "CENTER GPS WAIT: fallback",
     "WiFi bars / Ethernet: link",
     "",
     "WEB SETTINGS",
@@ -278,15 +280,18 @@ class RadarRenderer:
             self._text(target, "BUTTON 1 HOLD 8s: RESET", 12, 218, (255, 180, 45))
         else:
             self._text(target, "SYSTEM / SETTINGS", 12, 10, (0, 255, 80))
-            self._text(target, f"HOST: {system_info.get('hostname', '--')}", 12, 42, (210, 230, 215))
-            self._text(target, f"IP: {system_info.get('ip', '--')}", 12, 64, (210, 230, 215))
-            self._text(target, f"API: {system_info.get('api', '--')}", 12, 86, (210, 230, 215))
-            self._text(target, f"AIRCRAFT: {system_info.get('aircraft', '0')}", 12, 108, (210, 230, 215))
+            self._text(target, f"HOST: {system_info.get('hostname', '--')}", 12, 34, (210, 230, 215))
+            self._text(target, f"IP: {system_info.get('ip', '--')}", 12, 52, (210, 230, 215))
+            self._text(target, f"API: {system_info.get('api', '--')}  A/C: {system_info.get('aircraft', '0')}", 12, 70, (210, 230, 215))
+            source = system_info.get("centre_source", "CONFIG")
+            self._text(target, f"CENTER: {source}", 12, 88, (0, 235, 75) if source == "GPS" else (255, 190, 55))
+            self._text(target, f"LAT: {system_info.get('centre_latitude', '--')}", 12, 106, (210, 230, 215))
+            self._text(target, f"LON: {system_info.get('centre_longitude', '--')}", 12, 124, (210, 230, 215))
             health_warning = system_info.get("health_warning", "")
             power_text = "HISTORY" if health_warning == "POWER HISTORY" else health_warning or "OK"
             health_color = (255, 190, 55) if health_warning else (210, 230, 215)
-            self._text(target, f"TEMP: {system_info.get('temperature', '--')}  PWR: {power_text}", 12, 130, health_color)
-            self._text(target, "OPEN IN BROWSER:", 12, 158, (120, 160, 130))
+            self._text(target, f"TEMP: {system_info.get('temperature', '--')}  PWR: {power_text}", 12, 142, health_color)
+            self._text(target, "OPEN IN BROWSER:", 12, 160, (120, 160, 130))
             self._text(target, system_info.get("url", "--"), 12, 178, (0, 220, 75))
             self._text(target, system_info.get("token", ""), 12, 196, (0, 220, 75))
             self._draw_qr(target, system_info.get("url", "") + system_info.get("token", ""), 230, 136, 80)

@@ -50,6 +50,14 @@ class TrackingConfig:
 
 
 @dataclass(frozen=True)
+class GpsConfig:
+    enabled: bool = False
+    device_path: str = "auto"
+    baud_rate: int = 9600
+    fix_timeout_seconds: float = 15.0
+
+
+@dataclass(frozen=True)
 class TouchConfig:
     device_name: str = "EP0110M09"
     rotation: int = 90
@@ -106,6 +114,7 @@ class AppConfig:
     radar: RadarConfig = field(default_factory=RadarConfig)
     opensky: OpenSkyConfig = field(default_factory=OpenSkyConfig)
     tracking: TrackingConfig = field(default_factory=TrackingConfig)
+    gps: GpsConfig = field(default_factory=GpsConfig)
     touch: TouchConfig = field(default_factory=TouchConfig)
     ui: UiConfig = field(default_factory=UiConfig)
     localization: LocalizationConfig = field(default_factory=LocalizationConfig)
@@ -174,12 +183,13 @@ def load_config(path: Path | None = None) -> AppConfig:
     radar_raw = raw.get("radar", {})
     opensky_raw = raw.get("opensky", {})
     tracking_raw = raw.get("tracking", {})
+    gps_raw = raw.get("gps", {})
     touch_raw = raw.get("touch", {})
     ui_raw = raw.get("ui", {})
     localization_raw = raw.get("localization", {})
     web_raw = raw.get("web", {})
     wifi_raw = raw.get("wifi", {})
-    if not all(isinstance(item, dict) for item in (display_raw, runtime_raw, radar_raw, opensky_raw, tracking_raw, touch_raw, ui_raw, localization_raw, web_raw, wifi_raw)):
+    if not all(isinstance(item, dict) for item in (display_raw, runtime_raw, radar_raw, opensky_raw, tracking_raw, gps_raw, touch_raw, ui_raw, localization_raw, web_raw, wifi_raw)):
         raise ValueError("configuration sections must be objects")
 
     device = display_raw.get("device", "/dev/fb0")
@@ -227,6 +237,11 @@ def load_config(path: Path | None = None) -> AppConfig:
     update_mode = display_raw.get("update_mode", "full")
     if update_mode not in {"full", "dirty"}:
         raise ValueError("display.update_mode must be 'full' or 'dirty'")
+    gps_device_path = gps_raw.get("device_path", "auto")
+    if not isinstance(gps_device_path, str) or not gps_device_path:
+        raise ValueError("gps.device_path must be 'auto' or a device path")
+    if gps_device_path != "auto" and (not gps_device_path.startswith("/dev/") or ".." in gps_device_path or len(gps_device_path) > 255):
+        raise ValueError("gps.device_path must be 'auto' or an absolute path under /dev")
 
     return AppConfig(
         display=DisplayConfig(
@@ -257,6 +272,12 @@ def load_config(path: Path | None = None) -> AppConfig:
             prediction_seconds=_require_float(tracking_raw, "prediction_seconds", 20.0, 0.0, 120.0),
             stale_after_seconds=_require_float(tracking_raw, "stale_after_seconds", 90.0, 10.0, 600.0),
             show_on_ground=_require_bool(tracking_raw, "show_on_ground", False),
+        ),
+        gps=GpsConfig(
+            enabled=_require_bool(gps_raw, "enabled", False),
+            device_path=gps_device_path,
+            baud_rate=_require_int(gps_raw, "baud_rate", 9600, 1200, 115200),
+            fix_timeout_seconds=_require_float(gps_raw, "fix_timeout_seconds", 15.0, 3.0, 120.0),
         ),
         touch=TouchConfig(
             device_name=device_name.strip(),

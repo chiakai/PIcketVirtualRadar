@@ -77,6 +77,25 @@ class ConfigTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "at most 3"):
                 load_config(path)
 
+    def test_loads_usb_gps_configuration(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "config.json"
+            path.write_text(
+                json.dumps({"gps": {"enabled": True, "device_path": "/dev/serial/by-id/gps", "baud_rate": 4800}}),
+                encoding="utf-8",
+            )
+            config = load_config(path)
+            self.assertTrue(config.gps.enabled)
+            self.assertEqual(config.gps.device_path, "/dev/serial/by-id/gps")
+            self.assertEqual(config.gps.baud_rate, 4800)
+
+    def test_rejects_gps_path_outside_dev(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "config.json"
+            path.write_text(json.dumps({"gps": {"device_path": "/tmp/gps"}}), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "under /dev"):
+                load_config(path)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -28,6 +28,12 @@
     "stale_after_seconds": 90.0,
     "show_on_ground": false
   },
+  "gps": {
+    "enabled": false,
+    "device_path": "auto",
+    "baud_rate": 9600,
+    "fix_timeout_seconds": 15.0
+  },
   "touch": {
     "device_name": "EP0110M09",
     "rotation": 90,

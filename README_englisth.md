@@ -19,6 +19,7 @@ A Raspberry Pi 3 implementation of the core Pocket Virtual Radar experience usin
 - Raspberry Pi 3
 - [Adafruit PiTFT Plus 320×240 2.8" TFT + Capacitive Touchscreen, Product ID 2423](https://www.adafruit.com/product/2423)
 - 64-bit Raspberry Pi OS Lite
+- Optional USB GPS dongle producing standard NMEA 0183 GGA or RMC data
 - Display: 320×240 RGB565
 - Touch device name: `EP0110M09`
 - Landscape overlay rotation: `rotate=90` by default, switchable to `270°` from the Web UI
@@ -55,6 +56,7 @@ Main modules under `src/picket_virtual_radar/`:
 - `radar_renderer.py`: radar, side panel, overlays, and QR code.
 - `opensky.py`: OAuth2 token handling, API validation, backoff, and caching.
 - `tracking.py`: aircraft state, interpolation, prediction, and expiry.
+- `gps.py`: USB serial discovery, NMEA checksum/GGA/RMC parsing, and fix timeout.
 - `wifi_manager.py`: client reconnect, AP fallback, SSID scanning, and button reset.
 - `web_server.py`: token-protected Web settings.
 - `settings_store.py` and `config_recovery.py`: atomic settings and rollback.
@@ -162,6 +164,7 @@ Shows:
 
 - Hostname and IP address.
 - OpenSky API state and aircraft count.
+- Radar-centre source and coordinates: `CENTER: CONFIG`, `CENTER: GPS WAIT`, or `CENTER: GPS`, plus latitude/longitude to six decimal places.
 - CPU temperature.
 - `PWR: OK`, a current power/thermal warning, or `PWR: HISTORY`.
 - Web URL and access token.
@@ -237,6 +240,21 @@ Rotation affects both framebuffer output and capacitive-touch coordinates and mu
 4. Automatically reboots after responding to the Web request; reconnection normally takes about one minute.
 
 If the boot-overlay update fails, the Web UI reports the error and does not save the new angle. If writing the configuration fails, the application attempts to restore the previous boot angle.
+
+### USB GPS (NMEA 0183)
+
+- Use external USB GPS for radar centre: enables or disables the dongle; disabled by default.
+- Device path: `auto` tries `/dev/ttyUSB0` and then `/dev/ttyACM0`; a custom absolute path below `/dev/`, such as `/dev/serial/by-id/...`, is also accepted.
+- Baud rate: 4800, 9600, 38400, or 115200; default 9600.
+
+The GPS reader verifies NMEA checksums and accepts GGA or RMC sentences with a valid fix. When GPS is enabled:
+
+1. While the dongle is absent or has no fix, the Radar latitude/longitude remain active; their defaults are Taoyuan Airport at `25.080278, 121.232222`.
+2. After a valid fix, both the displayed radar centre and OpenSky bounding box move to the GPS coordinates.
+3. If no new fix arrives for 15 seconds, the application falls back to the configured coordinates and returns to GPS after a new fix.
+4. The information page shows yellow `GPS WAIT` or green `GPS` to identify the current source.
+
+Prefer `/dev/serial/by-id/...` so adding another USB serial device does not change the tty number. The systemd service includes the `dialout` supplementary group. If the device cannot be opened, verify its path, baud rate, NMEA output, and `journalctl -u picket-virtual-radar`.
 
 ### Localization
 
@@ -324,7 +342,7 @@ Production configuration:
 
 Example: [config.example.json](config.example.json)
 
-Sections: `display`, `runtime`, `radar`, `opensky`, `tracking`, `touch`, `ui`, `localization`, `web`, and `wifi`. Priority flights are stored in `ui.highlight_callsigns` as a JSON array containing at most three strings.
+Sections: `display`, `runtime`, `radar`, `opensky`, `tracking`, `gps`, `touch`, `ui`, `localization`, `web`, and `wifi`. Priority flights are stored in `ui.highlight_callsigns` as a JSON array containing at most three strings.
 
 Never commit a production file containing the OpenSky Client Secret, Web token, or Wi-Fi information.
 

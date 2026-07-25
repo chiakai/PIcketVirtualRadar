@@ -101,6 +101,12 @@ class OpenSkyTests(unittest.TestCase):
         self.assertEqual(snapshot.aircraft, tuple(aircraft))
         self.assertIsNotNone(snapshot.last_success_monotonic)
 
+    def test_data_layer_updates_query_geometry(self):
+        layer = OpenSkyDataLayer(self.config, self.geometry)
+        updated = RadarGeometry(latitude=24.5, longitude=120.8, radius_km=30)
+        layer.set_geometry(updated)
+        self.assertIs(layer.client.geometry, updated)
+
 
 if __name__ == "__main__":
     unittest.main()

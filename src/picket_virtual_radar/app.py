@@ -12,6 +12,7 @@ from .backlight import BacklightController
 from .config_recovery import confirm_start
 from .display import FramebufferDisplay
 from .geometry import RadarGeometry
+from .gps import UsbGpsReader
 from .opensky import OpenSkyDataLayer
 from .radar_renderer import RadarRenderer
 from .settings_store import update_settings
@@ -40,6 +41,8 @@ class RadarApplication:
         self.display_zoom = 1.0
         self._last_range_tap = 0.0
         self.data_layer = OpenSkyDataLayer(config.opensky, self.geometry)
+        self.gps_reader = UsbGpsReader(config.gps)
+        self.centre_source = "CONFIG"
         self.tracker = AircraftTracker(config.tracking)
         self._last_ingested_snapshot: float | None = None
         self.api_status = "CONFIG"
@@ -102,6 +105,7 @@ class RadarApplication:
     def update(self, elapsed: float) -> None:
         del elapsed
         self.logic_ticks += 1
+        self._update_gps_centre()
         snapshot = self.data_layer.snapshot()
         self.api_status = snapshot.status
         if (
@@ -124,6 +128,34 @@ class RadarApplication:
                 f" direction={gesture.direction}" if gesture.direction else "",
             )
             self._handle_gesture(gesture, views)
+
+    def _update_gps_centre(self) -> None:
+        gps = self.gps_reader.snapshot()
+        use_gps = gps.status == "FIX" and gps.latitude is not None and gps.longitude is not None
+        latitude = gps.latitude if use_gps else self.config.radar.latitude
+        longitude = gps.longitude if use_gps else self.config.radar.longitude
+        source = "GPS" if use_gps else ("GPS WAIT" if self.config.gps.enabled else "CONFIG")
+        self.system_info["gps_status"] = gps.status
+        self.system_info["gps_device"] = gps.device
+        self.system_info["centre_source"] = source
+        self.system_info["centre_latitude"] = f"{latitude:.6f}"
+        self.system_info["centre_longitude"] = f"{longitude:.6f}"
+        if source == self.centre_source and abs(latitude - self.geometry.latitude) < 1e-7 and abs(longitude - self.geometry.longitude) < 1e-7:
+            return
+        self.centre_source = source
+        self.geometry = RadarGeometry(
+            latitude=latitude,
+            longitude=longitude,
+            radius_km=self.config.radar.radius_km,
+        )
+        self.display_geometry = RadarGeometry(
+            latitude=latitude,
+            longitude=longitude,
+            radius_km=self.config.radar.radius_km * self.display_zoom,
+        )
+        self.data_layer.set_geometry(self.geometry)
+        self.renderer = None
+        LOG.info("radar centre changed: %.6f, %.6f source=%s", latitude, longitude, source)
 
     def _persist_options(self) -> None:
         try:
@@ -205,8 +237,8 @@ class RadarApplication:
         if now - self._last_range_tap <= 0.5:
             self.display_zoom = 0.5 if self.display_zoom == 1.0 else 1.0
             self.display_geometry = RadarGeometry(
-                latitude=self.config.radar.latitude,
-                longitude=self.config.radar.longitude,
+                latitude=self.geometry.latitude,
+                longitude=self.geometry.longitude,
                 radius_km=self.config.radar.radius_km * self.display_zoom,
             )
             self.renderer = None
@@ -305,6 +337,7 @@ class RadarApplication:
 
         try:
             self.data_layer.start()
+            self.gps_reader.start()
             self.backlight.open()
             self.touch.open()
             self.wifi_manager.start()
@@ -356,6 +389,7 @@ class RadarApplication:
             self.help_button.close()
             self.backlight.close()
             self.data_layer.stop()
+            self.gps_reader.stop()
 
         elapsed = time.monotonic() - start
         LOG.info(

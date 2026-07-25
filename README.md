@@ -19,6 +19,7 @@
 - Raspberry Pi 3
 - [Adafruit PiTFT Plus 320×240 2.8" TFT + Capacitive Touchscreen，Product ID 2423](https://www.adafruit.com/product/2423)
 - Raspberry Pi OS Lite 64-bit
+- 可選 USB GPS Dongle，輸出標準 NMEA 0183（GGA 或 RMC）
 - 螢幕解析度：320×240、RGB565
 - 觸控控制器名稱：`EP0110M09`
 - 橫向旋轉：預設 `rotate=90`，可由 Web 切換為 `270°`
@@ -55,6 +56,7 @@ OpenSky OAuth2 / states API
 - `radar_renderer.py`：雷達、資訊欄、overlay 與 QR Code。
 - `opensky.py`：OAuth2 token、API 查詢、驗證、退避與快取。
 - `tracking.py`：航機狀態、插值、推算及過期移除。
+- `gps.py`：USB serial 偵測、NMEA checksum／GGA／RMC 解析與 fix 逾時。
 - `wifi_manager.py`：client 重連、AP fallback、SSID 掃描與按鍵重設。
 - `web_server.py`：token 保護的 Web 設定介面。
 - `settings_store.py`、`config_recovery.py`：原子寫入與設定回復。
@@ -162,6 +164,7 @@ Raspberry Pi OS 啟動
 
 - Hostname、IP。
 - OpenSky API 狀態與航機數量。
+- 雷達中心來源及座標：`CENTER: CONFIG`、`CENTER: GPS WAIT` 或 `CENTER: GPS`，以及六位小數的 Latitude／Longitude。
 - CPU 溫度。
 - `PWR: OK`、即時供電／過熱警告或 `PWR: HISTORY`。
 - Web URL 與 access token。
@@ -237,6 +240,21 @@ Rotation 同時影響 framebuffer 與電容觸控座標，不能只修改其中�
 4. 回應 Web 請求後自動重新開機，通常約一分鐘可重新連線。
 
 若 boot overlay 更新失敗，Web 會顯示錯誤且不儲存新角度；若設定檔寫入失敗，程式會嘗試將 boot 角度回復為原值。
+
+### USB GPS (NMEA 0183)
+
+- Use external USB GPS for radar centre：啟用或停用外接 USB GPS，預設停用。
+- Device path：預設 `auto`，依序尋找 `/dev/ttyUSB0`、`/dev/ttyACM0`；也可自行輸入 `/dev/` 下的完整路徑，例如穩定的 `/dev/serial/by-id/...`。
+- Baud rate：可選 4800、9600、38400、115200；預設 9600。
+
+GPS reader 驗證 NMEA checksum，接受具有有效定位狀態的 GGA 或 RMC sentence。啟用 GPS 後：
+
+1. Dongle 不存在或尚未定位時，雷達仍使用 Web Radar 區的 Latitude／Longitude；預設即桃園機場 `25.080278, 121.232222`。
+2. 取得有效 fix 後，雷達畫面中心及 OpenSky bounding box 一起切換到 GPS 座標。
+3. 連續 15 秒沒有新 fix 時，自動退回設定座標；重新定位後再切回 GPS。
+4. 資訊頁以黃色 `GPS WAIT` 或綠色 `GPS` 顯示目前來源。
+
+建議使用 `/dev/serial/by-id/...`，避免同時插入其他 USB serial 裝置後 tty 編號改變。systemd service 已加入 `dialout` supplementary group；若裝置仍無法開啟，請檢查路徑、baud rate、NMEA 輸出及 `journalctl -u picket-virtual-radar`。
 
 ### Localization
 
@@ -324,7 +342,7 @@ Ethernet 只有在 carrier、NetworkManager connected、有效 IPv4 與 Ethernet
 
 範例設定：[config.example.json](config.example.json)
 
-重要區段：`display`、`runtime`、`radar`、`opensky`、`tracking`、`touch`、`ui`、`localization`、`web`、`wifi`。重點航班儲存在 `ui.highlight_callsigns`，格式為最多三個字串的 JSON array。
+重要區段：`display`、`runtime`、`radar`、`opensky`、`tracking`、`gps`、`touch`、`ui`、`localization`、`web`、`wifi`。重點航班儲存在 `ui.highlight_callsigns`，格式為最多三個字串的 JSON array。
 
 請勿將包含 OpenSky Client Secret、Web token 或 Wi-Fi 資訊的正式設定提交到版本控制。
 

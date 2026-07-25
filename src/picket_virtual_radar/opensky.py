@@ -183,8 +183,9 @@ class OpenSkyClient:
         self.tokens = TokenManager(config, self.transport, clock)
 
     def fetch(self) -> list[AircraftView]:
+        geometry = self.geometry
         token = self.tokens.get()
-        query = urllib.parse.urlencode(bounding_box(self.geometry))
+        query = urllib.parse.urlencode(bounding_box(geometry))
         response = self.transport.request(
             f"{STATES_URL}?{query}",
             headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
@@ -202,7 +203,10 @@ class OpenSkyClient:
             raise RateLimitError(retry_after)
         if response.status != 200:
             raise OpenSkyError(f"OpenSky states request returned HTTP {response.status}")
-        return parse_states(response.body, self.geometry)
+        return parse_states(response.body, geometry)
+
+    def set_geometry(self, geometry: RadarGeometry) -> None:
+        self.geometry = geometry
 
 
 @dataclass(frozen=True)
@@ -237,6 +241,9 @@ class OpenSkyDataLayer:
     def snapshot(self) -> OpenSkySnapshot:
         with self._lock:
             return self._snapshot
+
+    def set_geometry(self, geometry: RadarGeometry) -> None:
+        self.client.set_geometry(geometry)
 
     def _set_status(self, status: str, aircraft: tuple[AircraftView, ...] | None = None) -> None:
         with self._lock:
