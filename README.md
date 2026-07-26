@@ -475,3 +475,7 @@ systemctl is-active polkit.service picket-virtual-radar.service
 ```
 
 規則中的 `subject.user` 必須與 `picket-virtual-radar.service` 的 `User=` 相同；本專案預設皆為 `rpi`。`sudo` 不需密碼不代表 systemd service 可直接提權，因服務啟用了 `NoNewPrivileges=true`，設備操作應透過最小範圍的 PolicyKit 規則授權。
+
+## 開發協作聲明
+
+本專案由專案作者與 OpenAI Codex 協作完成。Codex 協助進行需求整理、系統設計、程式實作、測試、Raspberry Pi 部署驗證及中英文文件撰寫；專案方向、功能需求與最終決策由專案作者提出及確認。

@@ -475,3 +475,7 @@ systemctl is-active polkit.service picket-virtual-radar.service
 ```
 
 The rule's `subject.user` must match `User=` in `picket-virtual-radar.service`; both default to `rpi`. Passwordless `sudo` does not mean a systemd service can elevate directly because the unit uses `NoNewPrivileges=true`. Device operations should be authorized through the narrowly scoped PolicyKit rule.
+
+## Development Assistance
+
+This project was completed collaboratively by the project author and OpenAI Codex. Codex assisted with requirements organization, system design, implementation, testing, Raspberry Pi deployment verification, and bilingual documentation. The project direction, feature requirements, and final decisions were provided and approved by the project author.
